@@ -96,18 +96,42 @@ function smiley(radius: number) : twgl.Arrays {
     // using the radius and an angle. Then convert them to polar coordinates.
 
     // Sample data for a single yellow triangle. Replace with your values.
-    positionData.push(0, 100);
-    positionData.push(-120, -100);
-    positionData.push(120, -100);
-    colorData.push(0.9, 0.8, 0, 1);
-    colorData.push(0.9, 0.8, 0, 1);
-    colorData.push(0.9, 0.8, 0, 1);
+    const yellow = [1, 0.85, 0, 1];
+    const black = [0, 0, 0, 1];
 
-    indexData.push(0, 2, 1);
+    function circle(cx: number, cy: number, r: number, color: number[], sides: number): void {
+        const center = positionData.length / 2;
+        positionData.push(cx, cy);
+        colorData.push(...color);
+        for (let i = 0; i < sides; i++) {
+            const angle = 2 * Math.PI * i / sides;
+            positionData.push(cx + r * Math.cos(angle), cy + r * Math.sin(angle));
+            colorData.push(...color);
+        }
+        for (let i = 0; i < sides; i++) {
+            indexData.push(center, center + 1 + i, center + 1 + (i + 1) % sides);
+        }
+    }
 
+    circle(0, 0, radius, yellow, 40);
+    circle(-radius * 0.35, radius * 0.3, radius * 0.12, black, 20);
+    circle(radius * 0.35, radius * 0.3, radius * 0.12, black, 20);
 
-
-
+    const segments = 12;
+    const first = positionData.length / 2;
+    for (let i = 0; i <= segments; i++) {
+        const angle = Math.PI * (1.2 + 0.6 * i / segments);
+        const c = Math.cos(angle);
+        const s = Math.sin(angle);
+        positionData.push(radius * 0.5 * c, radius * 0.5 * s);
+        positionData.push(radius * 0.6 * c, radius * 0.6 * s);
+        colorData.push(...black, ...black);
+    }
+    for (let i = 0; i < segments; i++) {
+        const v = first + i * 2;
+        indexData.push(v, v + 1, v + 3);
+        indexData.push(v, v + 3, v + 2);
+    }   
 
     // Build the final object with the arrays for positions, colors, and indices
     const arrays: twgl.Arrays = {

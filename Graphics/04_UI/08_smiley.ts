@@ -18,12 +18,24 @@ import { type Color } from '../libs/color.js';
 import vsGLSL from './vs_matrices_vcolor.glsl?raw';
 import fsGLSL from './fs_vertex_color.glsl?raw';
 
+const ORDERS = {
+    'scale -> rotation -> translation': ['S', 'R', 'T'],
+    'scale -> translation -> rotation': ['S', 'T', 'R'],
+    'translation -> scale -> rotation': ['T', 'S', 'R'],
+    'rotation -> translation -> scale': ['R', 'T', 'S'],
+    'rotation -> scale -> translation': ['R', 'S', 'T'],
+} as const;
+
+type OrderName = keyof typeof ORDERS;
+
 
 /*
  * Subclass of Scene with the particular objects and settings for this example.
  * Specifies the objects that will be used, and the UI operations available.
  */
 class RotationScene extends Scene {
+    order: OrderName = 'scale -> translation -> rotation';
+
     constructor(gl: WebGL2RenderingContext) {
         super(gl, vsGLSL, fsGLSL);
 
@@ -58,15 +70,26 @@ class RotationScene extends Scene {
 
         // Transform matrices for the model
         // TODO: Create the matrices necessary
+        const translateMatrix: Mat3 = M3.translation(v2_trans);
+        const scaleMatrix: Mat3 = M3.scale(v2_scale);
+        const pivotToCenterMatrix: Mat3 = M3.translation(v2_pivot_to_center);
+        const rotationMatrix: Mat3 = M3.rotation(model.transforms.rr.z);
+        const centerToPivotMatrix: Mat3 = M3.translation(v2_center_to_pivot);
+        const rotateAroundPivot: Mat3 = M3.multiply(centerToPivotMatrix,
+            M3.multiply(rotationMatrix, pivotToCenterMatrix));
 
-
+        const matrices: Record<string, Mat3> = {
+            S: scaleMatrix,
+            R: rotateAroundPivot,
+            T: translateMatrix,
+        };
 
         // Create a composite transform matrix
         let modelTransforms: Mat3 = M3.identity();
         // TODO: Multiply the matrices in the correct order to obtain the required results
-
-
-
+        for (const key of ORDERS[this.order]) {
+            modelTransforms = M3.multiply(matrices[key], modelTransforms);
+        }
 
         gl.useProgram(programInfo.program);
 
@@ -102,6 +125,8 @@ class RotationScene extends Scene {
         const pivot = this.getObject('pivot');
 
         const gui = new GUI();
+
+        gui.add(this, 'order', Object.keys(ORDERS));
 
         const modelFolder = gui.addFolder('Model');
 
